@@ -1,0 +1,524 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <meta charset="UTF-8" />
+    <title>Advanced Exclusion Zone Test</title>
+    <style>
+      html, body {
+        margin: 0;
+        padding: 0;
+        width: 100%;
+        height: 100%;
+        overflow-x: hidden;
+        background: #111;
+        font-family: 'Inter', system-ui, -apple-system, sans-serif;
+        color: #fff;
+      }
+      canvas {
+        display: block;
+        position: fixed;
+        top: 0;
+        left: 0;
+        z-index: 0;
+      }
+      .controls {
+        position: relative;
+        z-index: 1;
+        padding: 20px;
+        background: rgba(0, 0, 0, 0.7);
+        border-radius: 10px;
+        margin: 20px;
+        display: inline-block;
+        max-width: 500px;
+      }
+      .control-btn {
+        background: rgba(255, 255, 255, 0.1);
+        border: 1px solid rgba(255, 255, 255, 0.2);
+        color: white;
+        padding: 10px 20px;
+        border-radius: 30px;
+        cursor: pointer;
+        transition: all 0.3s ease;
+        font-size: 16px;
+        margin: 5px;
+      }
+      .control-btn:hover {
+        background: rgba(255, 255, 255, 0.2);
+      }
+      .control-btn.active {
+        background: rgba(255, 255, 255, 0.3);
+        border-color: rgba(255, 255, 255, 0.5);
+      }
+      h1 {
+        margin: 0 0 15px 0;
+      }
+      .slider-container {
+        margin: 15px 0;
+      }
+      .slider-container label {
+        display: inline-block;
+        width: 150px;
+      }
+      .slider-container input {
+        width: 200px;
+      }
+      .slider-value {
+        display: inline-block;
+        width: 50px;
+        text-align: right;
+      }
+    </style>
+  </head>
+  <body>
+    <canvas id="background"></canvas>
+    <div class="controls">
+      <h1>Advanced Exclusion Zone Test</h1>
+      
+      <div>
+        <h3>Exclusion Zone Type</h3>
+        <button class="control-btn active" data-shape="sphere">Sphere</button>
+        <button class="control-btn" data-shape="cylinder">Cylinder</button>
+        <button class="control-btn" data-shape="box">Box</button>
+        <button class="control-btn" data-shape="iris">Iris</button>
+      </div>
+      
+      <div class="slider-container">
+        <h3>Exclusion Zone Parameters</h3>
+        <div>
+          <label for="size-slider">Size:</label>
+          <input type="range" id="size-slider" min="50" max="300" value="150">
+          <span class="slider-value" id="size-value">150</span>
+        </div>
+        <div>
+          <label for="particle-count">Particle Count:</label>
+          <input type="range" id="particle-count" min="100" max="1000" value="500" step="50">
+          <span class="slider-value" id="count-value">500</span>
+        </div>
+        <div>
+          <label for="particle-speed">Particle Speed:</label>
+          <input type="range" id="particle-speed" min="0.5" max="5" value="1.5" step="0.5">
+          <span class="slider-value" id="speed-value">1.5</span>
+        </div>
+      </div>
+      
+      <div>
+        <h3>Visualization Options</h3>
+        <button class="control-btn" id="toggle-exclusion">Show Exclusion Zone</button>
+        <button class="control-btn" id="toggle-connections">Toggle Connections</button>
+      </div>
+      
+      <div style="margin-top: 20px;">
+        <p id="status">Current exclusion: Sphere</p>
+        <p>Scroll to influence particles and observe how they avoid the exclusion zone.</p>
+      </div>
+    </div>
+
+    <!-- Load the individual modules -->
+    <script src="Config.js"></script>
+    <script src="ExclusionZone.js"></script>
+    <script src="Particle.js"></script>
+    <script src="Camera.js"></script>
+    <script src="Renderer.js"></script>
+    <script src="ShapeManager.js"></script>
+    <script src="AnimationController.js"></script>
+    <script src="Particle3DMesh.js"></script>
+    
+    <script>
+      // Custom shape for testing exclusion zones
+      class TestShape {
+        constructor(type, size) {
+          this.name = 'test-exclusion';
+          this.hasExclusionZone = true;
+          this.type = type;
+          this.size = size;
+          
+          // Create the appropriate exclusion zone
+          this.createExclusionZone();
+        }
+        
+        createExclusionZone() {
+          switch(this.type) {
+            case 'sphere':
+              this.exclusionZone = new ExclusionZone('sphere', {
+                x: 0,
+                y: 0,
+                z: 0,
+                radius: this.size
+              });
+              break;
+              
+            case 'cylinder':
+              this.exclusionZone = new ExclusionZone('cylinder', {
+                x: 0,
+                y: 0,
+                z: 0,
+                radius: this.size,
+                height: this.size * 2,
+                axis: 'y'
+              });
+              break;
+              
+            case 'box':
+              this.exclusionZone = new ExclusionZone('box', {
+                x: 0,
+                y: 0,
+                z: 0,
+                width: this.size * 2,
+                height: this.size * 2,
+                depth: this.size * 2
+              });
+              break;
+          }
+        }
+        
+        crossesExclusionZone(p1, p2) {
+          return this.exclusionZone.intersectsLine(p1, p2);
+        }
+      }
+      
+      // Initialize the particle mesh
+      let particleMesh = new Particle3DMesh('background', {
+        PARTICLE_COUNT: 500,
+        PARTICLE_SIZE: 3,
+        CONNECTION_DISTANCE: 200,
+        PARTICLE_SPEED: 1.5
+      });
+      
+      // Variables to track current state
+      let currentExclusionType = 'sphere';
+      let currentSize = 150;
+      let showExclusionZone = false;
+      let showConnections = true;
+      
+      // Create custom shape with exclusion zone
+      function createCustomShape() {
+        // Instead of using setShape('random'), we'll manually set random positions
+        // but keep our custom shape for exclusion zone handling
+        
+        // Create our custom test shape
+        const customShape = new TestShape(currentExclusionType, currentSize);
+        
+        // Set random positions for particles
+        const bound = particleMesh.config.BOUND;
+        particleMesh.particles.forEach(particle => {
+          // Reset particle to random position
+          particle.resetToRandom(particleMesh.config);
+          
+          // Make sure it's not in transition state
+          particle.inTransition = false;
+        });
+        
+        // Set our custom shape
+        particleMesh.currentShape = customShape;
+        
+        // Update status text
+        document.getElementById('status').textContent = `Current exclusion: ${currentExclusionType} (size: ${currentSize})`;
+      }
+      
+      // Initialize
+      createCustomShape();
+      particleMesh.start();
+      
+      // Set up exclusion type button handlers
+      document.querySelectorAll('[data-shape]').forEach(button => {
+        button.addEventListener('click', () => {
+          // Update active button
+          document.querySelector('.control-btn.active').classList.remove('active');
+          button.classList.add('active');
+          
+          // Get shape type
+          currentExclusionType = button.getAttribute('data-shape');
+          
+          // Create new shape
+          createCustomShape();
+        });
+      });
+      
+      // Set up slider handlers
+      document.getElementById('size-slider').addEventListener('input', (e) => {
+        currentSize = parseInt(e.target.value);
+        document.getElementById('size-value').textContent = currentSize;
+        createCustomShape();
+      });
+      
+      document.getElementById('particle-count').addEventListener('input', (e) => {
+        const count = parseInt(e.target.value);
+        document.getElementById('count-value').textContent = count;
+        
+        // Recreate particle mesh with new count
+        particleMesh.stop();
+        particleMesh = new Particle3DMesh('background', {
+          PARTICLE_COUNT: count,
+          PARTICLE_SIZE: 3,
+          CONNECTION_DISTANCE: 200,
+          PARTICLE_SPEED: parseFloat(document.getElementById('particle-speed').value)
+        });
+        
+        createCustomShape();
+        particleMesh.start();
+      });
+      
+      document.getElementById('particle-speed').addEventListener('input', (e) => {
+        const speed = parseFloat(e.target.value);
+        document.getElementById('speed-value').textContent = speed;
+        
+        // Recreate particle mesh with new speed
+        particleMesh.stop();
+        particleMesh = new Particle3DMesh('background', {
+          PARTICLE_COUNT: parseInt(document.getElementById('particle-count').value),
+          PARTICLE_SIZE: 3,
+          CONNECTION_DISTANCE: 200,
+          PARTICLE_SPEED: speed
+        });
+        
+        createCustomShape();
+        particleMesh.start();
+      });
+      
+      // Toggle exclusion zone visualization
+      document.getElementById('toggle-exclusion').addEventListener('click', () => {
+        const button = document.getElementById('toggle-exclusion');
+        showExclusionZone = !showExclusionZone;
+        
+        if (showExclusionZone) {
+          button.classList.add('active');
+          
+          // Add a custom draw method to render after each frame
+          particleMesh.customDrawFunction = function() {
+            if (particleMesh.currentShape && particleMesh.currentShape.exclusionZone) {
+              const ctx = particleMesh.ctx;
+              const camera = particleMesh.camera;
+              const exclusion = particleMesh.currentShape.exclusionZone;
+              
+              ctx.save();
+              ctx.globalAlpha = 0.2;
+              ctx.fillStyle = '#ff0000';
+              ctx.strokeStyle = '#ff3333';
+              ctx.lineWidth = 2;
+              
+              // Draw based on type
+              switch(exclusion.type) {
+                case 'sphere':
+                  // Project center and radius
+                  const center = camera.projectPoint({
+                    x: exclusion.params.x,
+                    y: exclusion.params.y,
+                    z: exclusion.params.z
+                  });
+                  
+                  if (center) {
+                    // Approximate projected radius
+                    const edge = camera.projectPoint({
+                      x: exclusion.params.x + exclusion.params.radius,
+                      y: exclusion.params.y,
+                      z: exclusion.params.z
+                    });
+                    
+                    if (edge) {
+                      const radius = Math.abs(edge.x - center.x);
+                      ctx.beginPath();
+                      ctx.arc(center.x, center.y, radius, 0, Math.PI * 2);
+                      ctx.fill();
+                      ctx.stroke();
+                    }
+                  }
+                  break;
+                  
+                case 'cylinder':
+                  // Basic cylinder visualization (top and bottom circles)
+                  const axis = exclusion.params.axis;
+                  const radius = exclusion.params.radius;
+                  const halfHeight = exclusion.params.height / 2;
+                  
+                  // Draw top circle
+                  let topCenter;
+                  if (axis === 'y') {
+                    topCenter = camera.projectPoint({
+                      x: exclusion.params.x,
+                      y: exclusion.params.y + halfHeight,
+                      z: exclusion.params.z
+                    });
+                  } else if (axis === 'x') {
+                    topCenter = camera.projectPoint({
+                      x: exclusion.params.x + halfHeight,
+                      y: exclusion.params.y,
+                      z: exclusion.params.z
+                    });
+                  } else {
+                    topCenter = camera.projectPoint({
+                      x: exclusion.params.x,
+                      y: exclusion.params.y,
+                      z: exclusion.params.z + halfHeight
+                    });
+                  }
+                  
+                  // Draw bottom circle
+                  let bottomCenter;
+                  if (axis === 'y') {
+                    bottomCenter = camera.projectPoint({
+                      x: exclusion.params.x,
+                      y: exclusion.params.y - halfHeight,
+                      z: exclusion.params.z
+                    });
+                  } else if (axis === 'x') {
+                    bottomCenter = camera.projectPoint({
+                      x: exclusion.params.x - halfHeight,
+                      y: exclusion.params.y,
+                      z: exclusion.params.z
+                    });
+                  } else {
+                    bottomCenter = camera.projectPoint({
+                      x: exclusion.params.x,
+                      y: exclusion.params.y,
+                      z: exclusion.params.z - halfHeight
+                    });
+                  }
+                  
+                  // Draw the circles if they're visible
+                  if (topCenter) {
+                    const edgePoint = camera.projectPoint({
+                      x: exclusion.params.x + (axis !== 'x' ? radius : 0),
+                      y: exclusion.params.y + (axis !== 'y' ? radius : 0),
+                      z: exclusion.params.z + (axis !== 'z' ? radius : 0)
+                    });
+                    
+                    if (edgePoint) {
+                      const projRadius = Math.sqrt(
+                        Math.pow(edgePoint.x - topCenter.x, 2) + 
+                        Math.pow(edgePoint.y - topCenter.y, 2)
+                      );
+                      
+                      ctx.beginPath();
+                      ctx.arc(topCenter.x, topCenter.y, projRadius, 0, Math.PI * 2);
+                      ctx.fill();
+                      ctx.stroke();
+                    }
+                  }
+                  
+                  if (bottomCenter) {
+                    const edgePoint = camera.projectPoint({
+                      x: exclusion.params.x + (axis !== 'x' ? radius : 0),
+                      y: exclusion.params.y + (axis !== 'y' ? radius : 0),
+                      z: exclusion.params.z + (axis !== 'z' ? radius : 0)
+                    });
+                    
+                    if (edgePoint) {
+                      const projRadius = Math.sqrt(
+                        Math.pow(edgePoint.x - bottomCenter.x, 2) + 
+                        Math.pow(edgePoint.y - bottomCenter.y, 2)
+                      );
+                      
+                      ctx.beginPath();
+                      ctx.arc(bottomCenter.x, bottomCenter.y, projRadius, 0, Math.PI * 2);
+                      ctx.fill();
+                      ctx.stroke();
+                    }
+                  }
+                  
+                  // Connect the circles if both are visible
+                  if (topCenter && bottomCenter) {
+                    ctx.beginPath();
+                    ctx.moveTo(topCenter.x, topCenter.y);
+                    ctx.lineTo(bottomCenter.x, bottomCenter.y);
+                    ctx.stroke();
+                  }
+                  break;
+                  
+                case 'box':
+                  // Simple box visualization (wireframe)
+                  const boxHalfWidth = exclusion.params.width / 2;
+                  const boxHalfHeight = exclusion.params.height / 2;
+                  const boxHalfDepth = exclusion.params.depth / 2;
+                  
+                  // Define the 8 corners of the box
+                  const corners = [
+                    { x: exclusion.params.x - boxHalfWidth, y: exclusion.params.y - boxHalfHeight, z: exclusion.params.z - boxHalfDepth },
+                    { x: exclusion.params.x + boxHalfWidth, y: exclusion.params.y - boxHalfHeight, z: exclusion.params.z - boxHalfDepth },
+                    { x: exclusion.params.x + boxHalfWidth, y: exclusion.params.y + boxHalfHeight, z: exclusion.params.z - boxHalfDepth },
+                    { x: exclusion.params.x - boxHalfWidth, y: exclusion.params.y + boxHalfHeight, z: exclusion.params.z - boxHalfDepth },
+                    { x: exclusion.params.x - boxHalfWidth, y: exclusion.params.y - boxHalfHeight, z: exclusion.params.z + boxHalfDepth },
+                    { x: exclusion.params.x + boxHalfWidth, y: exclusion.params.y - boxHalfHeight, z: exclusion.params.z + boxHalfDepth },
+                    { x: exclusion.params.x + boxHalfWidth, y: exclusion.params.y + boxHalfHeight, z: exclusion.params.z + boxHalfDepth },
+                    { x: exclusion.params.x - boxHalfWidth, y: exclusion.params.y + boxHalfHeight, z: exclusion.params.z + boxHalfDepth }
+                  ];
+                  
+                  // Project all corners
+                  const projectedCorners = corners.map(corner => camera.projectPoint(corner)).filter(p => p !== null);
+                  
+                  // If we have corners to draw
+                  if (projectedCorners.length > 0) {
+                    // Draw the box as a semi-transparent fill
+                    ctx.beginPath();
+                    ctx.moveTo(projectedCorners[0].x, projectedCorners[0].y);
+                    for (let i = 1; i < projectedCorners.length; i++) {
+                      ctx.lineTo(projectedCorners[i].x, projectedCorners[i].y);
+                    }
+                    ctx.closePath();
+                    ctx.fill();
+                    ctx.stroke();
+                  }
+                  break;
+                  
+                case 'iris':
+                  // Draw iris shape
+                  const irisRadius = exclusion.params.radius;
+                  const irisThickness = exclusion.params.thickness;
+                  const irisCenter = camera.projectPoint({
+                    x: exclusion.params.x,
+                    y: exclusion.params.y,
+                    z: exclusion.params.z
+                  });
+                  
+                  if (irisCenter) {
+                    // Draw outer circle
+                    ctx.beginPath();
+                    ctx.arc(irisCenter.x, irisCenter.y, irisRadius, 0, Math.PI * 2);
+                    ctx.stroke();
+                    
+                    // Draw inner circle
+                    ctx.beginPath();
+                    ctx.arc(irisCenter.x, irisCenter.y, irisRadius - irisThickness, 0, Math.PI * 2);
+                    ctx.stroke();
+                  }
+                  break;
+              }
+              
+              ctx.restore();
+            }
+          };
+          
+          // Modify the animate method of Particle3DMesh to include our custom drawing
+          const originalAnimate = particleMesh.animate;
+          particleMesh.animate = function() {
+            originalAnimate.call(this);
+            
+            if (this.customDrawFunction) {
+              this.customDrawFunction();
+            }
+          };
+        } else {
+          button.classList.remove('active');
+          // Remove custom draw function
+          particleMesh.customDrawFunction = null;
+          
+          // Restore original animate method
+          particleMesh.animate = Particle3DMesh.prototype.animate;
+        }
+      });
+      
+      // Toggle connections
+      document.getElementById('toggle-connections').addEventListener('click', () => {
+        const button = document.getElementById('toggle-connections');
+        showConnections = !showConnections;
+        
+        if (showConnections) {
+          button.classList.remove('active');
+          particleMesh.config.CONNECTION_DISTANCE = 200;
+        } else {
+          button.classList.add('active');
+          particleMesh.config.CONNECTION_DISTANCE = 0; // Disable connections
+        }
+      });
+    </script>
+  </body>
+</html>

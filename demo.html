@@ -1,0 +1,254 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <meta charset="UTF-8" />
+    <title>3D Particle Mesh Demo</title>
+    <style>
+      /* Full‑screen reset */
+      html, body {
+        margin: 0;
+        padding: 0;
+        width: 100%;
+        height: 100%;
+        overflow-x: hidden;
+        background: #111;
+        font-family: 'Inter', system-ui, -apple-system, sans-serif;
+        color: #fff;
+      }
+      /* Canvas fills the window and sits behind content */
+      canvas {
+        display: block;
+        position: fixed;
+        top: 0;
+        left: 0;
+        z-index: 0;
+      }
+      /* Content styling */
+      .content {
+        position: relative;
+        z-index: 1;
+        padding: 40px 20px;
+        max-width: 1200px;
+        margin: 0 auto;
+      }
+      
+      h1 { 
+        font-size: 3.5em; 
+        margin: 20px 0;
+        background: linear-gradient(45deg, #fff, #a8a8a8);
+        -webkit-background-clip: text;
+        -webkit-text-fill-color: transparent;
+        text-align: center;
+      }
+      
+      .subtitle {
+        text-align: center;
+        color: #a8a8a8;
+        font-size: 1.2em;
+        margin-bottom: 60px;
+      }
+
+      /* Controls */
+      .controls {
+        display: flex;
+        flex-wrap: wrap;
+        justify-content: center;
+        gap: 20px;
+        margin-bottom: 40px;
+      }
+
+      .control-btn {
+        background: rgba(255, 255, 255, 0.1);
+        border: 1px solid rgba(255, 255, 255, 0.2);
+        color: white;
+        padding: 10px 20px;
+        border-radius: 30px;
+        cursor: pointer;
+        transition: all 0.3s ease;
+        font-size: 16px;
+      }
+
+      .control-btn:hover {
+        background: rgba(255, 255, 255, 0.2);
+        transform: translateY(-2px);
+      }
+
+      .control-btn.active {
+        background: rgba(255, 255, 255, 0.3);
+        border-color: rgba(255, 255, 255, 0.5);
+      }
+
+      /* Card Grid */
+      .card-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+        gap: 30px;
+        padding: 20px;
+      }
+
+      .card {
+        background: rgba(255, 255, 255, 0.1);
+        backdrop-filter: blur(10px);
+        border-radius: 15px;
+        padding: 25px;
+        transition: transform 0.3s ease, background 0.3s ease;
+        border: 1px solid rgba(255, 255, 255, 0.1);
+      }
+
+      .card:hover {
+        transform: translateY(-5px);
+        background: rgba(255, 255, 255, 0.15);
+      }
+
+      .card h2 {
+        font-size: 1.5em;
+        margin: 0 0 15px 0;
+        color: #fff;
+      }
+
+      .card p {
+        color: #a8a8a8;
+        line-height: 1.6;
+        margin: 0;
+      }
+
+      @media (max-width: 768px) {
+        h1 { font-size: 2.5em; }
+        .card-grid { grid-template-columns: 1fr; }
+      }
+    </style>
+  </head>
+  <body>
+    <canvas id="background"></canvas>
+    <div class="content">
+      <h1>Particle Mesh Demo</h1>
+      <p class="subtitle">Explore different particle formations with smooth transitions</p>
+      
+      <div class="controls">
+        <button class="control-btn active" data-shape="random">Random</button>
+        <button class="control-btn" data-shape="sphere">Sphere</button>
+        <button class="control-btn" data-shape="iris">Iris</button>
+        <button class="control-btn" data-shape="torus">Torus</button>
+        <button class="control-btn" data-shape="cube">Cube</button>
+        <button class="control-btn" data-shape="spiral">Spiral</button>
+      </div>
+      
+      <div class="card-grid">
+        <div class="card">
+          <h2>About This Demo</h2>
+          <p>This demonstrates the Particle3DMesh system, a modular and reusable 3D particle animation library. Click the buttons above to see different particle formations with smooth transitions between them.</p>
+        </div>
+
+        <div class="card">
+          <h2>Interaction</h2>
+          <p>Scroll to influence the particle flow. The particles will respond to your scrolling, creating an interactive experience.</p>
+        </div>
+
+        <div class="card">
+          <h2>Custom Shapes</h2>
+          <p>The Iris shape demonstrates an exclusion zone - notice how connections don't cross through the pupil area. This technique can be used to create complex shapes with internal structure.</p>
+        </div>
+      </div>
+    </div>
+
+    <!-- Load the individual modules -->
+    <script src="Config.js"></script>
+    <script src="ExclusionZone.js"></script>
+    <script src="Particle.js"></script>
+    <script src="Camera.js"></script>
+    <script src="Renderer.js"></script>
+    <script src="ShapeManager.js"></script>
+    <script src="AnimationController.js"></script>
+    <script src="Particle3DMesh.js"></script>
+    
+    <script>
+      // Initialize the particle mesh
+      const particleMesh = new Particle3DMesh('background', {
+        PARTICLE_COUNT: 300,
+        PARTICLE_SIZE: 3,
+        CONNECTION_DISTANCE: 300
+      });
+      
+      // Start with random distribution
+      particleMesh.setShape('random').start();
+      
+      // Set up button click handlers
+      document.querySelectorAll('.control-btn').forEach(button => {
+        button.addEventListener('click', () => {
+          // Update active button
+          document.querySelector('.control-btn.active').classList.remove('active');
+          button.classList.add('active');
+          
+          // Get shape name
+          const shapeName = button.getAttribute('data-shape');
+          
+          // Set shape options based on shape name
+          let options = {};
+          
+          switch(shapeName) {
+            case 'iris':
+              options = {
+                radius: 400,
+                pupilRadius: 120,
+                depth: 80
+              };
+              break;
+            case 'sphere':
+              options = {
+                radius: 400
+              };
+              break;
+            case 'torus':
+              options = {
+                majorRadius: 350,
+                minorRadius: 100
+              };
+              break;
+            case 'cube':
+              options = {
+                size: 400,
+                hollow: true
+              };
+              break;
+            case 'spiral':
+              options = {
+                radius: 400,
+                turns: 3,
+                height: 600
+              };
+              break;
+          }
+          
+          // Transition to the new shape
+          particleMesh.transitionToShape(shapeName, options, 2000, 'easeInOut');
+        });
+      });
+      
+      
+      // Auto transition demo
+      let demoIndex = 0;
+      const demoShapes = ['random', 'sphere', 'iris', 'torus', 'cube', 'spiral'];
+      
+      function runDemo() {
+        // Skip if user has clicked a button
+        if (document.querySelector('.control-btn.active').getAttribute('data-shape') !== demoShapes[demoIndex]) {
+          return;
+        }
+        
+        // Move to next shape
+        demoIndex = (demoIndex + 1) % demoShapes.length;
+        const nextShape = demoShapes[demoIndex];
+        
+        // Update active button
+        document.querySelector('.control-btn.active').classList.remove('active');
+        document.querySelector(`.control-btn[data-shape="${nextShape}"]`).classList.add('active');
+        
+        // Trigger shape change
+        document.querySelector(`.control-btn[data-shape="${nextShape}"]`).click();
+      }
+      
+      // Run demo every 8 seconds
+      setInterval(runDemo, 8000);
+    </script>
+  </body>
+</html>
