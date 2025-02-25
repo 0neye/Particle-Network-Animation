@@ -249,14 +249,24 @@ class Particle3DMesh {
   }
   
   /**
-   * Transition particles from current shape to a new shape
-   * @param {string} shapeName - Name of the target shape
+   * Transition to a new shape
+   * @param {string} shapeName - Name of the shape to transition to
    * @param {Object} options - Options for the shape
    * @param {number} duration - Duration of transition in milliseconds
-   * @param {string} easing - Type of easing function to use
+   * @param {string} easing - Easing function to use
    * @param {Function} callback - Function to call when transition completes
+   * @returns {Particle3DMesh} - This instance for chaining
    */
   transitionToShape(shapeName, options = {}, duration = 1000, easing = 'easeInOut', callback = null) {
+    // Clear any existing exclusion zones from the current shape before transition
+    if (this.currentShape && this.currentShape.hasExclusionZone) {
+      // Temporarily remove the exclusion zone during transition
+      const tempShape = { ...this.currentShape };
+      tempShape.hasExclusionZone = false;
+      tempShape.exclusionZone = null;
+      this.currentShape = tempShape;
+    }
+    
     // Create the target shape
     this.targetShape = this.shapeManager.createShape(shapeName, this.particles, options);
     

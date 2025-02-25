@@ -283,13 +283,37 @@ class Particle {
     
     const eased = easingFunction(progress);
     
+    // Store previous position to calculate velocity vector
+    const prevX = this.x;
+    const prevY = this.y;
+    const prevZ = this.z;
+    
     // Interpolate between original and target positions
     this.x = this.originalX + (this.targetX - this.originalX) * eased;
     this.y = this.originalY + (this.targetY - this.originalY) * eased;
     this.z = this.originalZ + (this.targetZ - this.originalZ) * eased;
     
-    // If transition is complete, update flags
+    // If transition is complete, update flags and inherit velocity from transition
     if (progress >= 1) {
+      // Calculate direction vector from the last frame of animation
+      const dx = this.x - prevX;
+      const dy = this.y - prevY;
+      const dz = this.z - prevZ;
+      
+      // Normalize the direction vector
+      const length = Math.sqrt(dx*dx + dy*dy + dz*dz);
+      
+      if (length > 0) {
+        // Get the current speed (magnitude of velocity)
+        const currentSpeed = Math.sqrt(this.vx*this.vx + this.vy*this.vy + this.vz*this.vz);
+        
+        // Apply the direction with the original speed
+        this.vx = (dx / length) * currentSpeed;
+        this.vy = (dy / length) * currentSpeed;
+        this.vz = (dz / length) * currentSpeed;
+        this.baseVy = this.vy;
+      }
+      
       this.originalX = this.x;
       this.originalY = this.y;
       this.originalZ = this.z;
