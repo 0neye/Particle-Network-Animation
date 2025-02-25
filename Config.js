@@ -19,6 +19,9 @@ class Config {
       CONNECTION_DISTANCE: 300, // If two particles are closer than this (in world units), draw a connection
       SCROLL_VELOCITY_FACTOR: 0.01, // How much scrolling affects particle velocity
       
+      // Spatial grid settings
+      GRID_CELL_SIZE: null,     // Size of each cell in the spatial grid (null = use CONNECTION_DISTANCE)
+      
       // Camera and projection
       CAMERA_DISTANCE: 500,     // Distance of the camera from (0,0,0)
       FOCAL_LENGTH: 800,        // Focal length for perspective projection
@@ -68,11 +71,16 @@ class Config {
       }
     }
     
+    // Set GRID_CELL_SIZE to CONNECTION_DISTANCE if not specified
+    if (merged.GRID_CELL_SIZE === null) {
+      merged.GRID_CELL_SIZE = merged.CONNECTION_DISTANCE;
+    }
+    
     return merged;
   }
 }
 
-// Export for module usage
-if (typeof module !== 'undefined' && module.exports) {
-  module.exports = Config;
+// Export for browser usage
+if (typeof window !== 'undefined') {
+  window.Config = Config;
 }

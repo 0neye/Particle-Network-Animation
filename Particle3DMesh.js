@@ -3,6 +3,7 @@
  * This class coordinates all components of the particle system including
  * particles, camera, renderer, shapes, and animations.
  */
+
 class Particle3DMesh {
   /**
    * Create a new Particle3DMesh instance
@@ -32,6 +33,9 @@ class Particle3DMesh {
     this.renderer = new Renderer(this.canvas, this.ctx, this.config);
     this.shapeManager = new ShapeManager(this.config);
     this.animationController = new AnimationController(this.config);
+    
+    // Initialize spatial grid for efficient connection checks
+    this.spatialGrid = new SpatialGrid(this.config.GRID_CELL_SIZE, this.config.BOUND);
     
     // Current and target shapes
     this.currentShape = null;
@@ -128,6 +132,9 @@ class Particle3DMesh {
     // Update particle positions
     this.updateParticles();
     
+    // Update spatial grid with new particle positions
+    this.updateSpatialGrid();
+    
     // Project particles to screen coordinates
     this.projectParticles();
     
@@ -166,6 +173,13 @@ class Particle3DMesh {
   }
   
   /**
+   * Update the spatial grid with current particle positions
+   */
+  updateSpatialGrid() {
+    this.spatialGrid.addParticles(this.particles);
+  }
+  
+  /**
    * Project all particles to screen coordinates
    */
   projectParticles() {
@@ -189,13 +203,35 @@ class Particle3DMesh {
   
   /**
    * Draw connections between nearby particles
+   * Uses spatial grid for efficient proximity checks
    */
   drawConnections() {
-    // Check each pair of particles
+    // For performance measurement
+    const startTime = performance.now();
+    let connectionChecks = 0;
+    let connectionsDrawn = 0;
+    
+    // Process each particle
     for (let i = 0; i < this.particles.length; i++) {
-      for (let j = i + 1; j < this.particles.length; j++) {
-        const p1 = this.particles[i];
-        const p2 = this.particles[j];
+      const p1 = this.particles[i];
+      
+      // Get the cell key for this particle
+      const cellKey = this.spatialGrid.getCellKey(p1.x, p1.y, p1.z);
+      
+      // Get all particles in this cell and neighboring cells
+      const neighborhoodParticles = this.spatialGrid.getParticlesInNeighborhood(cellKey);
+      
+      // Check connections with particles in the neighborhood
+      for (let j = 0; j < neighborhoodParticles.length; j++) {
+        const p2 = neighborhoodParticles[j];
+        
+        // Skip self-connections and duplicate checks
+        if (p1 === p2 || this.particles.indexOf(p1) > this.particles.indexOf(p2)) {
+          continue;
+        }
+        
+        // Count connection checks
+        connectionChecks++;
         
         // Compute 3D distance between particles
         const dx = p1.x - p2.x;
@@ -215,9 +251,21 @@ class Particle3DMesh {
           // Only draw the line if both particles are visible
           if (p1.screen && p2.screen) {
             this.renderer.drawConnection(p1, p2, this.camera, this.smoothedScrollVelocity);
+            connectionsDrawn++;
           }
         }
       }
+    }
+    
+    // Log performance metrics every 100 frames
+    if (Math.random() < 0.01) { // ~1% of frames
+      const endTime = performance.now();
+      const duration = endTime - startTime;
+      console.log(`Spatial Grid Performance:
+        - Particles: ${this.particles.length}
+        - Connection checks: ${connectionChecks} (vs ${this.particles.length * (this.particles.length - 1) / 2} in O(n²))
+        - Connections drawn: ${connectionsDrawn}
+        - Time: ${duration.toFixed(2)}ms`);
     }
   }
   
@@ -313,9 +361,18 @@ class Particle3DMesh {
     this.animationController.registerTransition(name, transitionFunction);
     return this;
   }
+  
+  /**
+   * Set a custom draw function to be called each frame
+   * @param {Function} drawFunction - Custom drawing function
+   */
+  setCustomDrawFunction(drawFunction) {
+    this.customDrawFunction = drawFunction;
+    return this;
+  }
 }
 
-// Export for module usage
-if (typeof module !== 'undefined' && module.exports) {
-  module.exports = Particle3DMesh;
+// Export for browser usage
+if (typeof window !== 'undefined') {
+  window.Particle3DMesh = Particle3DMesh;
 }
