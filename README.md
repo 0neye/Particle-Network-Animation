@@ -163,6 +163,12 @@ const particleMesh = new Particle3DMesh('canvasId', customConfig);
 
 Check out the included `demo.html` file for a complete demonstration of the system's capabilities.
 
+## Author(s)
+
+ - [0neye](https://github.com/0neye)
+ - [Claude 3.7 Sonnet](https://www.anthropic.com/news/claude-3-7-sonnet)
+ - [03-mini-high](https://openai.com/index/openai-o3-mini/)
+
 ## License
 
 MIT
