@@ -13,10 +13,21 @@ class Particle3DMesh {
   constructor(canvasId, customConfig = {}) {
     // Initialize canvas and context
     this.canvas = document.getElementById(canvasId);
-    this.ctx = this.canvas.getContext('2d');
     
     // Set up configuration
     this.config = new Config(customConfig);
+    
+    // Set default: use WebGL if enabled in the config.
+    this.config.USE_WEBGL = this.config.USE_WEBGL !== undefined ? this.config.USE_WEBGL : true;
+    
+    if (this.config.USE_WEBGL) {
+      // Use WebGL renderer
+      this.renderer = new WebGLRenderer(this.canvas, this.config);
+    } else {
+      // Fallback to the old Canvas 2D renderer
+      this.ctx = this.canvas.getContext('2d');
+      this.renderer = new Renderer(this.canvas, this.ctx, this.config);
+    }
     
     // Initialize state variables
     this.particles = [];
@@ -30,7 +41,6 @@ class Particle3DMesh {
     
     // Create component instances
     this.camera = new Camera(this.config);
-    this.renderer = new Renderer(this.canvas, this.ctx, this.config);
     this.shapeManager = new ShapeManager(this.config);
     this.animationController = new AnimationController(this.config);
     
@@ -82,6 +92,11 @@ class Particle3DMesh {
   resizeCanvas() {
     this.canvas.width = window.innerWidth;
     this.canvas.height = window.innerHeight;
+    
+    // If using WebGL, we need to update the viewport
+    if (this.config.USE_WEBGL && this.renderer.gl) {
+      this.renderer.gl.viewport(0, 0, this.canvas.width, this.canvas.height);
+    }
   }
   
   /**
@@ -138,11 +153,63 @@ class Particle3DMesh {
     // Project particles to screen coordinates
     this.projectParticles();
     
-    // Draw connections between particles
-    this.drawConnections();
+    // Let connections be computed on CPU (using spatial grid, etc.) as before.
+    const connections = [];
     
-    // Draw particles
-    this.drawParticles();
+    // Only compute connections if we need them
+    if (this.config.USE_WEBGL || this.config.SHOW_CONNECTIONS !== false) {
+      // Process each particle for connections
+      for (let i = 0; i < this.particles.length; i++) {
+        const p1 = this.particles[i];
+        
+        // Get the cell key for this particle
+        const cellKey = this.spatialGrid.getCellKey(p1.x, p1.y, p1.z);
+        
+        // Get all particles in this cell and neighboring cells
+        const neighborhoodParticles = this.spatialGrid.getParticlesInNeighborhood(cellKey);
+        
+        // Check connections with particles in the neighborhood
+        for (let j = 0; j < neighborhoodParticles.length; j++) {
+          const p2 = neighborhoodParticles[j];
+          
+          // Skip self-connections and duplicate checks
+          if (p1 === p2 || this.particles.indexOf(p1) > this.particles.indexOf(p2)) {
+            continue;
+          }
+          
+          // Compute 3D distance between particles
+          const dx = p1.x - p2.x;
+          const dy = p1.y - p2.y;
+          const dz = p1.z - p2.z;
+          const distance = Math.sqrt(dx*dx + dy*dy + dz*dz);
+          
+          // Check if particles are close enough to connect
+          if (distance < this.config.CONNECTION_DISTANCE) {
+            // Check if connection crosses any exclusion zones
+            if (this.currentShape && this.currentShape.hasExclusionZone) {
+              if (this.currentShape.crossesExclusionZone(p1, p2)) {
+                continue; // Skip this connection
+              }
+            }
+            
+            // Add connection to the list
+            connections.push({ p1, p2 });
+          }
+        }
+      }
+    }
+    
+    // Now use the renderer to draw based on the renderer type
+    if (this.config.USE_WEBGL) {
+      // Draw connections first, then particles on top
+      if (connections.length > 0) {
+        this.renderer.drawConnections(connections, this.camera, this.smoothedScrollVelocity);
+      }
+      this.renderer.drawParticles(this.particles, this.camera, this.smoothedScrollVelocity);
+    } else {
+      this.drawConnections();
+      this.drawParticles();
+    }
     
     // Call custom draw function if defined
     if (this.customDrawFunction) {
@@ -186,18 +253,24 @@ class Particle3DMesh {
     this.particles.forEach(particle => {
       particle.screen = this.camera.projectPoint(particle);
       
-      // Calculate distance from camera to particle for fog effect
-      const dx = particle.x - this.camera.position.x;
-      const dy = particle.y - this.camera.position.y;
-      const dz = particle.z - this.camera.position.z;
-      const distanceToCamera = Math.sqrt(dx*dx + dy*dy + dz*dz);
-      
-      // Calculate fog factor (0 = fully visible, 1 = fully hidden)
-      const fogFactor = Math.min(Math.max(
-        (distanceToCamera - this.config.FOG_START) / 
-        (this.config.FOG_END - this.config.FOG_START), 0), 1);
-      
-      particle.opacity = 1 - fogFactor;
+      // Only calculate fog in Canvas renderer - WebGL handles it in the shader
+      if (!this.config.USE_WEBGL) {
+        // Calculate distance from camera to particle for fog effect
+        const dx = particle.x - this.camera.position.x;
+        const dy = particle.y - this.camera.position.y;
+        const dz = particle.z - this.camera.position.z;
+        const distanceToCamera = Math.sqrt(dx*dx + dy*dy + dz*dz);
+        
+        // Calculate fog factor (0 = fully visible, 1 = fully hidden)
+        const fogFactor = Math.min(Math.max(
+          (distanceToCamera - this.config.FOG_START) / 
+          (this.config.FOG_END - this.config.FOG_START), 0), 1);
+        
+        particle.opacity = 1 - fogFactor;
+      } else {
+        // For WebGL, just set full opacity since fog is handled in the shader
+        particle.opacity = 1.0;
+      }
     });
   }
   
@@ -206,6 +279,9 @@ class Particle3DMesh {
    * Uses spatial grid for efficient proximity checks
    */
   drawConnections() {
+    // If using WebGL, this method shouldn't be called directly
+    if (this.config.USE_WEBGL) return;
+    
     // For performance measurement
     const startTime = performance.now();
     let connectionChecks = 0;
@@ -273,6 +349,9 @@ class Particle3DMesh {
    * Draw all particles
    */
   drawParticles() {
+    // If using WebGL, this method shouldn't be called directly
+    if (this.config.USE_WEBGL) return;
+    
     this.particles.forEach(particle => {
       if (particle.screen) {
         this.renderer.drawParticle(particle, this.camera, this.smoothedScrollVelocity);

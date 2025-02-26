@@ -226,18 +226,24 @@ class Particle {
       // Reset particle with new position and velocity
       this.resetParticle(config);
       
-      // Place on the chosen boundary
+      // Place on the chosen boundary with random positions for the other two axes
       switch(axis) {
         case 0: // x-axis
           this.x = sign * config.BOUND;
+          this.y = (Math.random() * 2 - 1) * config.BOUND;
+          this.z = (Math.random() * 2 - 1) * config.BOUND;
           this.vx = -sign * Math.abs(this.vx); // Ensure velocity points inward
           break;
         case 1: // y-axis
+          this.x = (Math.random() * 2 - 1) * config.BOUND;
           this.y = sign * config.BOUND;
+          this.z = (Math.random() * 2 - 1) * config.BOUND;
           this.vy = -sign * Math.abs(this.vy);
           this.baseVy = this.vy; // Store the new base vertical velocity
           break;
         case 2: // z-axis
+          this.x = (Math.random() * 2 - 1) * config.BOUND;
+          this.y = (Math.random() * 2 - 1) * config.BOUND;
           this.z = sign * config.BOUND;
           this.vz = -sign * Math.abs(this.vz);
           break;

@@ -2,7 +2,7 @@
 <html>
   <head>
     <meta charset="UTF-8" />
-    <title>3D Particle Mesh Demo</title>
+    <title>3D Particle Mesh Demo (WebGL Version)</title>
     <style>
       /* Full‑screen reset */
       html, body {
@@ -116,6 +116,65 @@
         h1 { font-size: 2.5em; }
         .card-grid { grid-template-columns: 1fr; }
       }
+
+      /* Toggle switch for WebGL */
+      .toggle-container {
+        display: flex;
+        justify-content: center;
+        align-items: center;
+        margin: 20px 0;
+      }
+      
+      .toggle-label {
+        margin-right: 10px;
+        font-size: 1.1em;
+        color: #a8a8a8;
+      }
+      
+      .toggle-switch {
+        position: relative;
+        display: inline-block;
+        width: 60px;
+        height: 34px;
+      }
+      
+      .toggle-switch input {
+        opacity: 0;
+        width: 0;
+        height: 0;
+      }
+      
+      .toggle-slider {
+        position: absolute;
+        cursor: pointer;
+        top: 0;
+        left: 0;
+        right: 0;
+        bottom: 0;
+        background-color: #333;
+        transition: .4s;
+        border-radius: 34px;
+      }
+      
+      .toggle-slider:before {
+        position: absolute;
+        content: "";
+        height: 26px;
+        width: 26px;
+        left: 4px;
+        bottom: 4px;
+        background-color: white;
+        transition: .4s;
+        border-radius: 50%;
+      }
+      
+      input:checked + .toggle-slider {
+        background-color: #4CAF50;
+      }
+      
+      input:checked + .toggle-slider:before {
+        transform: translateX(26px);
+      }
     </style>
   </head>
   <body>
@@ -123,6 +182,15 @@
     <div class="content">
       <h1>Particle Mesh Demo</h1>
       <p class="subtitle">Explore different particle formations with smooth transitions</p>
+      
+      <!-- WebGL Toggle -->
+      <div class="toggle-container">
+        <span class="toggle-label">WebGL Rendering:</span>
+        <label class="toggle-switch">
+          <input type="checkbox" id="webgl-toggle" checked>
+          <span class="toggle-slider"></span>
+        </label>
+      </div>
       
       <div class="controls">
         <button class="control-btn active" data-shape="random">Random</button>
@@ -153,25 +221,82 @@
 
     <!-- Load the individual modules -->
     <script src="Config.js"></script>
+    <script src="Matrix4.js"></script>
     <script src="ExclusionZone.js"></script>
     <script src="Particle.js"></script>
     <script src="Camera.js"></script>
+    <!-- Include both renderers -->
     <script src="Renderer.js"></script>
+    <script src="WebGLRenderer.js"></script>
     <script src="ShapeManager.js"></script>
     <script src="AnimationController.js"></script>
     <script src="SpatialGrid.js"></script>
     <script src="Particle3DMesh.js"></script>
     
     <script>
-      // Initialize the particle mesh
-      const particleMesh = new Particle3DMesh('background', {
+      // Initialize the particle mesh with WebGL renderer by default
+      let particleMesh = new Particle3DMesh('background', {
         PARTICLE_COUNT: 300,
         PARTICLE_SIZE: 3,
-        CONNECTION_DISTANCE: 300
+        CONNECTION_DISTANCE: 300,
+        USE_WEBGL: true  // Use WebGL by default
       });
       
       // Start with random distribution
       particleMesh.setShape('random').start();
+      
+      // WebGL toggle handler
+      document.getElementById('webgl-toggle').addEventListener('change', function() {
+        const useWebGL = this.checked;
+        
+        // Stop the current animation
+        particleMesh.stop();
+        
+        // Get the current shape and options
+        const currentShapeName = document.querySelector('.control-btn.active').getAttribute('data-shape');
+        let options = {};
+        
+        // Set shape options based on shape name
+        switch(currentShapeName) {
+          case 'iris':
+            options = { radius: 400, pupilRadius: 120, depth: 80 };
+            break;
+          case 'sphere':
+            options = { radius: 400 };
+            break;
+          case 'torus':
+            options = { majorRadius: 350, minorRadius: 100 };
+            break;
+          case 'cube':
+            options = { size: 400, hollow: true };
+            break;
+          case 'spiral':
+            options = { radius: 400, turns: 3, height: 600 };
+            break;
+        }
+        
+        // Completely recreate the canvas to ensure clean initialization
+        const oldCanvas = document.getElementById('background');
+        const parent = oldCanvas.parentNode;
+        const newCanvas = document.createElement('canvas');
+        newCanvas.id = 'background';
+        newCanvas.width = oldCanvas.width;
+        newCanvas.height = oldCanvas.height;
+        
+        // Replace the old canvas with the new one
+        parent.replaceChild(newCanvas, oldCanvas);
+        
+        // Create a new particle mesh with the updated renderer setting
+        particleMesh = new Particle3DMesh('background', {
+          PARTICLE_COUNT: 300,
+          PARTICLE_SIZE: 3,
+          CONNECTION_DISTANCE: 300,
+          USE_WEBGL: useWebGL
+        });
+        
+        // Set the same shape and start again
+        particleMesh.setShape(currentShapeName, options).start();
+      });
       
       // Set up button click handlers
       document.querySelectorAll('.control-btn').forEach(button => {
