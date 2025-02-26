@@ -79,7 +79,6 @@
         <button class="control-btn active" data-shape="sphere">Sphere</button>
         <button class="control-btn" data-shape="cylinder">Cylinder</button>
         <button class="control-btn" data-shape="box">Box</button>
-        <button class="control-btn" data-shape="iris">Iris</button>
       </div>
       
       <div class="slider-container">
@@ -115,12 +114,16 @@
 
     <!-- Load the individual modules -->
     <script src="Config.js"></script>
+    <script src="Matrix4.js"></script>
     <script src="ExclusionZone.js"></script>
     <script src="Particle.js"></script>
     <script src="Camera.js"></script>
+    <!-- Include both renderers -->
     <script src="Renderer.js"></script>
+    <script src="WebGLRenderer.js"></script>
     <script src="ShapeManager.js"></script>
     <script src="AnimationController.js"></script>
+    <script src="SpatialGrid.js"></script>
     <script src="Particle3DMesh.js"></script>
     
     <script>
@@ -181,7 +184,8 @@
         PARTICLE_COUNT: 500,
         PARTICLE_SIZE: 3,
         CONNECTION_DISTANCE: 200,
-        PARTICLE_SPEED: 1.5
+        PARTICLE_SPEED: 1.5,
+        USE_WEBGL: false
       });
       
       // Variables to track current state
@@ -251,7 +255,8 @@
           PARTICLE_COUNT: count,
           PARTICLE_SIZE: 3,
           CONNECTION_DISTANCE: 200,
-          PARTICLE_SPEED: parseFloat(document.getElementById('particle-speed').value)
+          PARTICLE_SPEED: parseFloat(document.getElementById('particle-speed').value),
+          USE_WEBGL: false
         });
         
         createCustomShape();
@@ -268,7 +273,8 @@
           PARTICLE_COUNT: parseInt(document.getElementById('particle-count').value),
           PARTICLE_SIZE: 3,
           CONNECTION_DISTANCE: 200,
-          PARTICLE_SPEED: speed
+          PARTICLE_SPEED: speed,
+          USE_WEBGL: false
         });
         
         createCustomShape();
@@ -284,7 +290,7 @@
           button.classList.add('active');
           
           // Add a custom draw method to render after each frame
-          particleMesh.customDrawFunction = function() {
+          particleMesh.customDrawFunction = function() { 
             if (particleMesh.currentShape && particleMesh.currentShape.exclusionZone) {
               const ctx = particleMesh.ctx;
               const camera = particleMesh.camera;
@@ -455,29 +461,6 @@
                     }
                     ctx.closePath();
                     ctx.fill();
-                    ctx.stroke();
-                  }
-                  break;
-                  
-                case 'iris':
-                  // Draw iris shape
-                  const irisRadius = exclusion.params.radius;
-                  const irisThickness = exclusion.params.thickness;
-                  const irisCenter = camera.projectPoint({
-                    x: exclusion.params.x,
-                    y: exclusion.params.y,
-                    z: exclusion.params.z
-                  });
-                  
-                  if (irisCenter) {
-                    // Draw outer circle
-                    ctx.beginPath();
-                    ctx.arc(irisCenter.x, irisCenter.y, irisRadius, 0, Math.PI * 2);
-                    ctx.stroke();
-                    
-                    // Draw inner circle
-                    ctx.beginPath();
-                    ctx.arc(irisCenter.x, irisCenter.y, irisRadius - irisThickness, 0, Math.PI * 2);
                     ctx.stroke();
                   }
                   break;
