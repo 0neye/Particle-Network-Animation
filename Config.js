@@ -35,9 +35,9 @@ class Config {
       BACKGROUND_COLOR: '#111',
       PARTICLE_COLOR: '#fff',
       CHROMATIC_OFFSET: 1,      // Base pixel offset for chromatic aberration
-      CHROMATIC_STRENGTH: 0.6,  // Base opacity of the chromatic effect (0-1)
-      CHROMATIC_DISTANCE_FACTOR: 0.005, // How much distance affects chromatic aberration
-      CHROMATIC_VELOCITY_FACTOR: 5,  // How much camera velocity affects chromatic aberration
+      CHROMATIC_STRENGTH: 0.7,  // Base opacity of the chromatic effect (0-1)
+      CHROMATIC_DISTANCE_FACTOR: 0.006, // How much distance affects chromatic aberration
+      CHROMATIC_VELOCITY_FACTOR: 3,  // How much camera velocity affects chromatic aberration
       
       // Animation settings
       DEFAULT_TRANSITION_DURATION: 1000, // Default duration for shape transitions in ms

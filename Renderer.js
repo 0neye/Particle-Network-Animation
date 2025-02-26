@@ -19,6 +19,8 @@ class Renderer {
    * Clear the canvas
    */
   clear() {
+    if (!this.ctx) return;
+    
     this.ctx.fillStyle = this.config.BACKGROUND_COLOR;
     this.ctx.fillRect(0, 0, this.canvas.width, this.canvas.height);
   }
@@ -30,7 +32,7 @@ class Renderer {
    * @param {number} velocityFactor - Additional velocity factor for effects
    */
   drawParticle(particle, camera, velocityFactor) {
-    if (!particle.screen) return;
+    if (!this.ctx || !particle.screen) return;
     
     const r = particle.size * particle.screen.scale;
     const screenR = camera.getScreenRightVector();
@@ -80,7 +82,7 @@ class Renderer {
    * @param {number} velocityFactor - Additional velocity factor for effects
    */
   drawConnection(p1, p2, camera, velocityFactor) {
-    if (!p1.screen || !p2.screen) return;
+    if (!this.ctx || !p1.screen || !p2.screen) return;
     
     // Compute 3D distance between particles
     const dx = p1.x - p2.x;

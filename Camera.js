@@ -275,6 +275,32 @@ class Camera {
       y: screenR.y / screenRLength
     };
   }
+  
+  /**
+   * Get the view matrix for WebGL rendering
+   * @returns {Float32Array} The view matrix
+   */
+  getViewMatrix() {
+    // Compute view matrix using current position and target.
+    // For simplicity, here we compute a "lookAt" matrix (using our Matrix4 helper).
+    const eye = this.position;
+    // Use targetLookAt if set; otherwise look at origin.
+    const center = this.targetLookAt || { x: 0, y: 0, z: 0 };
+    // Flip the Y component of the up vector to match the Canvas 2D coordinate system
+    const up = { x: 0, y: -1, z: 0 };
+    return Matrix4.lookAt(eye, center, up);
+  }
+  
+  /**
+   * Get the projection matrix for WebGL rendering
+   * @returns {Float32Array} The projection matrix
+   */
+  getProjectionMatrix() {
+    const canvas = document.querySelector('canvas');
+    const aspect = canvas.width / canvas.height;
+    const fov = 2 * Math.atan(canvas.height / (2 * this.config.FOCAL_LENGTH));
+    return Matrix4.perspective(fov, aspect, 0.1, 2000.0);
+  }
 }
 
 // Export for module usage
