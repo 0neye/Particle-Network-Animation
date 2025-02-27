@@ -1,0 +1,35 @@
+{
+  "name": "particle3dmesh",
+  "version": "1.0.0",
+  "description": "A modular, reusable 3D particle animation system for creating interactive web backgrounds and visualizations",
+  "main": "index.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "keywords": [
+    "particles",
+    "3d",
+    "animation",
+    "canvas",
+    "webgl",
+    "background",
+    "visualization"
+  ],
+  "author": "0neye",
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/0neye/Particle-Network-Animation"
+  },
+  "dependencies": {},
+  "devDependencies": {},
+  "engines": {
+    "node": ">=12.0.0"
+  },
+  "files": [
+    "*.js",
+    "README.md",
+    "LICENSE"
+  ],
+  "private": true
+}
