@@ -7,10 +7,12 @@
 // This file is only needed for Node.js environments.
 // For browser usage, include the individual script files directly in your HTML:
 // <script src="Config.js"></script>
+// <script src="Matrix4.js"></script>
 // <script src="ExclusionZone.js"></script>
 // <script src="Particle.js"></script>
 // <script src="Camera.js"></script>
 // <script src="Renderer.js"></script>
+// <script src="WebGLRenderer.js"></script>
 // <script src="ShapeManager.js"></script>
 // <script src="AnimationController.js"></script>
 // <script src="SpatialGrid.js"></script>
@@ -22,21 +24,25 @@ if (typeof module !== 'undefined' && module.exports) {
   const Particle = require('./Particle');
   const Camera = require('./Camera');
   const Renderer = require('./Renderer');
+  const WebGLRenderer = require('./WebGLRenderer');
   const ShapeManager = require('./ShapeManager');
   const AnimationController = require('./AnimationController');
   const Config = require('./Config');
   const ExclusionZone = require('./ExclusionZone');
   const SpatialGrid = require('./SpatialGrid');
+  const Matrix4 = require('./Matrix4');
 
   module.exports = {
     Particle3DMesh,
     Particle,
     Camera,
     Renderer,
+    WebGLRenderer,
     ShapeManager,
     AnimationController,
     Config,
     ExclusionZone,
-    SpatialGrid
+    SpatialGrid,
+    Matrix4
   };
 }
