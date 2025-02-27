@@ -38,7 +38,7 @@ The system comes with several built-in shapes:
 
 ## Usage
 
-### Basic Usage
+### Basic Usage (Browser)
 
 ```html
 <!-- Include the required scripts -->
@@ -68,6 +68,168 @@ The system comes with several built-in shapes:
     }, 2000, 'easeInOut');
   }, 2000);
 </script>
+```
+
+### Nuxt 3 / Vue.js Usage
+
+This library is fully compatible with Nuxt 3 and Vue.js projects. You can install it via npm:
+
+```bash
+npm install particle3dmesh
+```
+
+#### Basic Vue Component Example
+
+```vue
+<template>
+  <div class="particle-container">
+    <canvas ref="particleCanvas" class="particle-canvas"></canvas>
+    <div class="content">
+      <h1>My Website</h1>
+      <!-- Your content here -->
+    </div>
+  </div>
+</template>
+
+<script setup>
+import { ref, onMounted, onBeforeUnmount } from 'vue';
+import { Particle3DMesh } from 'particle3dmesh';
+
+const particleCanvas = ref(null);
+let particleMesh = null;
+
+onMounted(() => {
+  if (particleCanvas.value) {
+    particleMesh = new Particle3DMesh(particleCanvas.value, {
+      PARTICLE_COUNT: 300,
+      PARTICLE_SIZE: 3,
+      CONNECTION_DISTANCE: 300
+    });
+    
+    // Set initial shape
+    particleMesh.setShape('sphere');
+  }
+});
+
+onBeforeUnmount(() => {
+  if (particleMesh) {
+    particleMesh.destroy();
+    particleMesh = null;
+  }
+});
+</script>
+
+<style scoped>
+.particle-container {
+  position: relative;
+  width: 100%;
+  height: 100vh;
+}
+
+.particle-canvas {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  z-index: 0;
+}
+
+.content {
+  position: relative;
+  z-index: 1;
+  padding: 40px 20px;
+}
+</style>
+```
+
+#### Ready-to-Use Component
+
+A ready-to-use Vue component is included in the `examples` directory. You can copy `ParticleBackground.vue` to your project and use it like this:
+
+```vue
+<template>
+  <div>
+    <ParticleBackground 
+      :particle-count="300"
+      :particle-size="3"
+      :connection-distance="300"
+      shape="sphere"
+      background-color="#111"
+      particle-color="#fff"
+      :use-web-g-l="true"
+    >
+      <div class="content">
+        <h1>My Website</h1>
+        <!-- Your content here -->
+      </div>
+    </ParticleBackground>
+  </div>
+</template>
+
+<script setup>
+import ParticleBackground from './components/ParticleBackground.vue';
+</script>
+
+<style scoped>
+.content {
+  padding: 40px 20px;
+  color: white;
+}
+</style>
+```
+
+### Nuxt.js Module
+
+For a seamless Nuxt.js integration, you can create a Nuxt module that automatically imports the component:
+
+1. Create a `modules/particles/index.js` file in your Nuxt project:
+
+```js
+import { defineNuxtModule } from '@nuxt/kit'
+import { fileURLToPath } from 'url'
+import { dirname, join } from 'path'
+
+const currentDir = dirname(fileURLToPath(import.meta.url))
+
+export default defineNuxtModule({
+  meta: {
+    name: 'particles',
+    configKey: 'particles',
+  },
+  setup(options, nuxt) {
+    nuxt.hook('components:dirs', (dirs) => {
+      dirs.push({
+        path: join(currentDir, 'components'),
+        prefix: 'Particle'
+      })
+    })
+  }
+})
+```
+
+2. Copy the `ParticleBackground.vue` component to `modules/particles/components/`
+
+3. Add the module to your `nuxt.config.js`:
+
+```js
+export default defineNuxtConfig({
+  modules: [
+    '~/modules/particles'
+  ]
+})
+```
+
+Now you can use the component anywhere in your Nuxt application without importing it:
+
+```vue
+<template>
+  <ParticleBackground shape="sphere">
+    <div class="content">
+      <!-- Your content here -->
+    </div>
+  </ParticleBackground>
+</template>
 ```
 
 ### Creating Custom Shapes

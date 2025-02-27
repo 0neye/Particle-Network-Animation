@@ -3,6 +3,13 @@
   "version": "1.0.0",
   "description": "A modular, reusable 3D particle animation system for creating interactive web backgrounds and visualizations",
   "main": "index.js",
+  "module": "index.esm.js",
+  "exports": {
+    ".": {
+      "import": "./index.esm.js",
+      "require": "./index.js"
+    }
+  },
   "scripts": {
     "test": "echo \"Error: no test specified\" && exit 1"
   },
